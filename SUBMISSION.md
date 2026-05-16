@@ -37,10 +37,10 @@ prompt or new weights — same agent, smarter every run.
 
 ### Query + Self-improve
 
-- How users query the wiki: skills are selected at agent runtime via
-  `cognee.search(..., query_type=AGENTIC_COMPLETION, skills=[...], session_id=)`.
-  In the demo, the "query" is "render an attempt that imitates the target",
-  and the response is the rendered `attempt.mp4`.
+- How users query the wiki: **we use Claude models for the agent.** Claude
+  reads the SKILL.md files from the cognee graph and writes
+  `remotion/src/Hero.tsx`, which renders to `attempt.mp4`. Intermediate
+  thoughts go to Redis via `session_id=<run_slug>`.
 - Where feedback comes from: a dual-video critique step — Gemini watches the
   agent's `attempt.mp4` *and* the human `target/edited.mp4` in one call and
   returns a precision/recall/F1 score over cut placements plus per-skill
@@ -167,7 +167,7 @@ commit path:          cognee.improve_skill(apply=True)
 
 - What the agent writes into Redis:
   - per-run Gemini observation answers (`session_remember` event)
-  - intermediate agent thoughts during `cognee.search(AGENTIC_COMPLETION)`
+  - intermediate Claude reasoning steps (session_id-scoped)
   - clip-vector embeddings for semantic retrieval
   - every pipeline step as a stream entry (`XADD llmwiki:events`)
 - How and when content is distilled into the graph:
@@ -198,7 +198,7 @@ Skill path: ./my_skills/
 
 Roles:
   - Ingestor:   Gemini 3.1 (vision) — extracts observations from target.mp4
-  - Querier:    Claude Code — reads SKILL.md from the graph, writes Hero.tsx
+  - Querier:    Claude — reads SKILL.md from the graph, writes Hero.tsx
                 (the Remotion edit), which renders attempt.mp4.
   - Critic:     Gemini dual-video — watches attempt + target side-by-side,
                 returns scores + per-skill proposals.
@@ -285,7 +285,7 @@ docker exec llmwiki-redis redis-cli FT.INFO llmwiki:clip-vectors | head -20
 
 ## Links
 
-- Repo: <github.com/piotrtyr/cinegraph>   (placeholder — will fill in at submission)
+- Repo: https://github.com/PiotrTyrakowski/LLM-Wiki-Hackaton
 - Slides / writeup: `slides/index.html` (Reveal.js, included in repo)
 - Live event stream proof: `docker exec llmwiki-redis redis-cli XREVRANGE llmwiki:events + - COUNT 30`
 - Example run artifacts: `runs/attempt-v1-2026-05-16T22-49-33Z/`
