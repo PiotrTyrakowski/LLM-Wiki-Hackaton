@@ -1,0 +1,28 @@
+[project]
+name = "llmwiki"
+version = "0.1.0"
+description = "YouTube editor agent that learns from human edits via Cognee + Redis"
+requires-python = ">=3.12"
+dependencies = [
+    "cognee[redis]",
+    "anthropic>=0.39",
+    "google-genai>=0.3",
+    "redis>=5.0",
+    "redisvl>=0.3",
+    "pydantic>=2.8",
+    "python-dotenv",
+    "typer",
+    "rich",
+    "fastapi",
+    "uvicorn[standard]",
+    "jinja2",
+    "markdown-it-py",
+    "diff-match-patch",
+    "pyyaml",
+    "tenacity",
+    "httpx",
+    "numpy",
+]
+
+[tool.uv]
+managed = true

@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.cognee_system/
+.cognee_data/
+cognee_state/
+runs/
+data/demo/
+node_modules/
+remotion/build/
+.DS_Store
