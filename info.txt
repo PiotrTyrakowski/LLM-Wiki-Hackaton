@@ -1,0 +1,23 @@
+https://github.com/topoteretes/cognee-community/tree/main/packages/vector/redis#readme
+
+
+
+The twist: I want to use Cognee (https://github.com/topoteretes/cognee) as a retrieval enrichment layer, not as a replacement for the markdown wiki. Karpathy's pure design relies on index.md lookup, which fails on naming mismatch, multi-hop questions, and provenance. Cognee's hybrid vector + knowledge graph fixes exactly those weaknesses.
+
+What we are NOT doing:
+
+
+
+
+
+Not replacing markdown with a graph DB. Markdown stays canonical.
+
+
+
+Not exposing Cognee to the user. It's invisible infrastructure.
+
+
+
+Not coupling the wiki's lifecycle to Cognee. The wiki is portable markdown either way.
+
+github.com

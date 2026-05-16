@@ -1,0 +1,114 @@
+
+
+1
+Obrazek w tle dla Hackathon: Building your own LLM Knowledge Wiki
+Obrazek w tle dla Hackathon: Building your own LLM Knowledge Wiki
+San Francisco
+Polecane w kalendarzu 
+San Francisco
+Hackathon: Building your own LLM Knowledge Wiki
+cognee
+maj
+16
+sobota, 16 maja
+12:00 - 18:00
+Pebblebed
+San Francisco, CA
+NA ŻYWO
+Jesteś na liście
+
+Mój bilet
+
+
+Zaproś znajomego
+Nie możesz już wziąć udziału? Powiadom hosta, anulując swoją rejestrację.
+Profil uzupełniony · Przypomnienie: E-mail
+O wydarzeniu
+
+​​🧠 AI-Memory Hackathon: Building your own Agent LLM Wiki 🚀
+​"Instead of just retrieving from raw documents at query time, the LLM incrementally builds and maintains a persistent wiki" - Karpathy
+
+​Recently, Karpathy popularised the idea of LLM Wiki. We decided to give it a go and try to extend on that idea and build one together with you.
+
+​​​🏆 $1,500+ Cash Pool
+​Main Prizes
+
+​🥇 Prize: $800 cash
+🥈 Prize: $500 cash
+🥉 Prize: $200 cash
+
+​🧰 Build LLM Knowledge Wiki
+​In this hands-on hackathon, you will use Cognee’s open-source memory engine to build your LLM Knowledge Wiki
+
+​Your wiki should do thee base operations:
+
+​Ingest
+
+​Query + Self-improve
+
+​Lint
+
+​Check how Karpathy explains it here: https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
+
+​💥 Show us what you got
+​You will have 3 minutes to stand out:
+
+​Present your idea and explain how you leverage agent self-improvement
+
+​Run a live demo that showcases your agent in action
+
+​​​⏱️ Schedule
+​12:00 PM — Doors open + Networking
+
+​12:30 PM — Opening remarks + partner demos
+
+​1:00 PM — Hacking begins
+
+​4:30 PM — Project Submission Deadline - finalists selection
+
+​5:00 PM — Finalist presentation & judging
+
+​5:30 PM — Awards ceremony
+
+​6:00 PM — Event wrap-up & doors close
+
+​​Technology & Venture Partners
+​Redis
+
+​
+
+​About Cognee
+
+​Cognee is an open-source AI memory engine that transforms unstructured data into persistent, queryable memory. It enables AI agents to store, retrieve, and reason over information across time, making it possible to build more reliable, adaptive, and stateful AI systems.
+
+​About Redis
+
+​Redis is a real-time context engine that unifies streaming and vector data to power intelligent applications and AI agents with instant awareness. It enables developers to process and serve dynamic context at sub-millisecond speed with enterprise-grade reliability, delivering highly responsive and personalized experiences at scale.
+
+​About Pebblebed
+
+​Pebblebed is a technical early stage VC founded by Pam Vagata (cofounder of OpenAI, ran AI for Stripe, inventor of FBLearner Flow); Keith Adams (founded Facebook AI Research, was chief architect at Slack, 20th engineer at VMWare) and Tammie Siew (former Sequoia Southeast Asia investor, former Sequoia & Notable Capital backed founder)
+
+Lokalizacja
+Pebblebed
+1417 15th St, San Francisco, CA 94103, USA
+
+Avatar for cognee
+Prezentowane przez
+cognee
+
+Subskrybuj
+Organizowane przez
+cognee
+Pebblebed VC
+Sahar Mor (Bond AI)
+Dave Nielsen
+Vasilije Markovic
+192 Weźmie udział
+
+max infeld, Kirill Igumenshchev i 190 innych
+
+Skontaktuj się z hostem
+
+Zgłoś wydarzenie
+SI
