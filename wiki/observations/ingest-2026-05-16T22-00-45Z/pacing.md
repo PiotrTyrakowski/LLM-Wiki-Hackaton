@@ -1,7 +1,7 @@
 ---
-run_slug: ingest-2026-05-16T21-42-37Z
+run_slug: ingest-2026-05-16T22-00-45Z
 kind: pacing
-created: 2026-05-16T21-42-44Z
+created: 2026-05-16T22-00-56Z
 ---
 
 # pacing
@@ -13,6 +13,5 @@ Watch this clip. Tabulate shot lengths in seconds. Format each line as `shot=<n>
 ## Answer
 
 shot=1 | start=0 | end=2 | length=2 | label=man talking to camera
-shot=2 | start=2 | end=3 | length=1 | label=a woman in a sauna
-shot=3 | start=3 | end=4 | length=1 | label=the woman drinking from a green smoothie
-shot=4 | start=4 | end=10 | length=6 | label=the man talking to the camera
+shot=2 | start=2 | end=5 | length=3 | label=woman in sauna
+shot=3 | start=5 | end=10 | length=5 | label=man talking to camera

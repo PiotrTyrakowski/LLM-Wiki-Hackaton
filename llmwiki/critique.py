@@ -1,8 +1,10 @@
-"""Op 2b: critique an attempt against the target.
+"""Op 2b: critique the rendered attempt against the target's observations.
 
-In the layered-EDL model the agent's "cuts" are the moments where an overlay
-appears or disappears. We score the agent's transition timestamps against the
-target's observed cut timestamps from the latest ingest.
+The editor (Claude Code) hand-codes Hero.tsx, so we don't have a JSON EDL to
+inspect anymore. Instead we ask Gemini to look at the rendered MP4 and tell us
+where its cuts are, then compare to the target's cuts observation. We also use
+GPT-4o-mini *only* as a critic — to turn the mismatch into editing-rule
+proposals. GPT is never the editor; only the analyst.
 """
 from __future__ import annotations
 
@@ -16,7 +18,9 @@ import yaml
 from openai import OpenAI
 from rich.console import Console
 
-from .config import LLM_API_KEY, LLM_MODEL, RUNS_DIR, WIKI_DIR
+from . import gemini_vision
+from .config import DEMO_TARGET, LLM_API_KEY, LLM_MODEL, RUNS_DIR, WIKI_DIR
+from .prompts import CUTS_PROMPT
 from .redis_use import publish_event
 from .wiki import append_log, parse_frontmatter
 
@@ -82,47 +86,35 @@ def _read_target_cuts() -> list[float]:
     return _parse_cuts(_read_obs("cuts"))
 
 
-def _agent_transitions_from_edl(edl: dict[str, Any]) -> list[float]:
-    """Treat each overlay start and end as an agent transition."""
-    out: list[float] = []
-    for ov in edl.get("overlays", []):
-        start = float(ov.get("start_s", 0))
-        out.append(start)
-        end = start + float(ov.get("duration_s", 0))
-        if end > start:
-            out.append(end)
-    return sorted(set(round(x, 3) for x in out))
+JUDGE_PROMPT = """You are an editorial critic. The agent rendered a video to mimic the structure of a human edit. You will be given:
 
-
-JUDGE_PROMPT = """You are an editorial critic. The agent built an edit using placeholder assets to mimic the structure of a human edit.
-
-You are given:
-- AGENT_EDL: the agent's overlay schedule (list of {source, start_s, duration_s}).
-- TARGET_CUTS: timestamps where the human cut to b-roll/image.
+- AGENT_CUTS: cut timestamps Gemini detected in the agent's rendered video.
+- TARGET_CUTS: cut timestamps from the human edit.
 - TARGET_BROLL_OBSERVATIONS: where the human placed b-roll moments.
 - TARGET_TEXT_OBSERVATIONS: where the human placed on-screen text.
 
-For each meaningful mismatch, write ONE concrete editing rule the agent should learn. The rule must:
-- name the SKILL it belongs to (one of: cut-detection, broll-selection, pacing, transitions, on-screen-text).
-- be a short imperative sentence with a numeric anchor (e.g. "Insert a b-roll between 2.0s and 3.5s when the speaker introduces a new concept.").
-- cite specific timestamps as evidence.
+For each meaningful mismatch, write ONE concrete editing rule the agent should learn. Each rule:
+- names the SKILL it belongs to (one of: cut-detection, broll-selection, pacing, transitions, on-screen-text).
+- is a short imperative sentence with at least one numeric anchor.
+- cites specific timestamps as evidence.
 
-Output ONLY valid YAML matching this schema (no fences, no prose):
+Output ONLY valid YAML (no fences, no prose):
+
 proposals:
   - skill: broll-selection
-    rule: "<rule>"
-    evidence: "@t=<sec>s human had b-roll but agent stayed on avatar"
-  - skill: cut-detection
-    rule: "<rule>"
-    evidence: "..."
+    rule: "Cut to b-roll at 1.5-4.0s when the speaker introduces sauna health claims."
+    evidence: "@t=1.5s human cut to b-roll; agent stayed on speaker"
+  - skill: on-screen-text
+    rule: "Use a turquoise pill with yellow accent on the keyword 'SAUNAS' between 6.9s and 9.3s."
+    evidence: "human used 'NOT ALL SAUNAS ARE CREATED EQUAL' pill 6.9-9.3s"
 """
 
 
-async def _judge(edl: dict[str, Any], target_cuts: list[float], broll_obs: str, text_obs: str) -> list[dict[str, str]]:
-    assert OPENAI is not None
+async def _judge(agent_cuts: list[float], target_cuts: list[float], broll_obs: str, text_obs: str) -> list[dict[str, str]]:
+    if not OPENAI:
+        return []
     user = (
-        f"AGENT_EDL_OVERLAYS={json.dumps(edl.get('overlays', []), indent=2)}\n"
-        f"AGENT_EDL_TEXT={json.dumps(edl.get('text_overlays', []), indent=2)}\n"
+        f"AGENT_CUTS={agent_cuts}\n"
         f"TARGET_CUTS={target_cuts}\n\n"
         f"TARGET_BROLL_OBSERVATIONS:\n{broll_obs[:1500]}\n\n"
         f"TARGET_TEXT_OBSERVATIONS:\n{text_obs[:1500]}\n"
@@ -149,31 +141,38 @@ async def _judge(edl: dict[str, Any], target_cuts: list[float], broll_obs: str, 
         return []
 
 
+async def _extract_agent_cuts(attempt_path: Path, run_slug: str) -> list[float]:
+    upload = await gemini_vision.upload_video(attempt_path, run_slug)
+    answer = await gemini_vision.ask(upload, CUTS_PROMPT)
+    (RUNS_DIR / run_slug / "agent_cuts.md").write_text(answer)
+    return _parse_cuts(answer)
+
+
 async def critique(run_slug: str) -> dict[str, Any]:
     run_dir = RUNS_DIR / run_slug
-    edl_path = run_dir / "edl.json"
-    if not edl_path.exists():
-        raise FileNotFoundError(f"edl.json missing: {edl_path}")
-    edl = json.loads(edl_path.read_text())
+    attempt_path = run_dir / "attempt.mp4"
+    if not attempt_path.exists():
+        raise FileNotFoundError(f"attempt.mp4 missing: {attempt_path}")
 
     console.rule(f"[bold yellow]Critique {run_slug}")
     publish_event("critique_start", {"slug": run_slug})
 
     target_cuts = _read_target_cuts()
-    if not target_cuts:
-        console.print("[critique] no cuts observation found in wiki/observations/ — was ingest run?")
-    agent_transitions = _agent_transitions_from_edl(edl)
-    scores = cut_f1(agent_transitions, target_cuts)
+    console.print(f"[critique] target cuts: n={len(target_cuts)}")
+    agent_cuts = await _extract_agent_cuts(attempt_path, run_slug)
+    console.print(f"[critique] agent cuts: n={len(agent_cuts)}")
+
+    scores = cut_f1(agent_cuts, target_cuts)
     console.print(f"[critique] scores: {scores}")
 
     broll_obs = _read_obs("broll")
     text_obs = _read_obs("text")
-    proposals = await _judge(edl, target_cuts, broll_obs, text_obs)
+    proposals = await _judge(agent_cuts, target_cuts, broll_obs, text_obs)
     console.print(f"[critique] {len(proposals)} proposals")
 
     out = {
         "scores": scores,
-        "agent_transitions": agent_transitions,
+        "agent_cuts": agent_cuts,
         "target_cuts": target_cuts,
         "proposals": proposals,
     }
@@ -188,8 +187,8 @@ async def critique(run_slug: str) -> dict[str, Any]:
         f"- f1: **{scores['f1']}**",
         f"- matched: {scores['matched']} of {scores['target_n']}",
         "",
-        f"## Agent transitions ({len(agent_transitions)})",
-        f"`{agent_transitions}`",
+        f"## Agent cuts ({len(agent_cuts)})",
+        f"`{agent_cuts}`",
         "",
         f"## Target cuts ({len(target_cuts)})",
         f"`{target_cuts}`",
