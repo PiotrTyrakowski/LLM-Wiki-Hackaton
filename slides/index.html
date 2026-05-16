@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cinegraph — Cognee × Redis Hackathon</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --fg: #f5f5f7;
+    --muted: #8b8b96;
+    --line: #1c1c26;
+    --accent: #7c5cff;    /* cognee / violet */
+    --redis: #dc382d;
+    --good: #4ade80;
+    --warn: #facc15;
+  }
+  html, body, .reveal { background: var(--bg); color: var(--fg); }
+  .reveal { font-family: "Inter", system-ui, sans-serif; font-weight: 400; }
+  .reveal .slides { text-align: left; }
+  .reveal .slides section { padding: 0 4vw; }
+  .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+    font-family: "Inter", system-ui, sans-serif;
+    color: var(--fg); text-transform: none; letter-spacing: -0.02em; font-weight: 800;
+    margin: 0 0 0.4em 0;
+  }
+  .reveal h1 { font-size: 6rem; font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
+  .reveal h2 { font-size: 2.4rem; font-weight: 800; }
+  .reveal h3 { font-size: 1.6rem; font-weight: 700; color: var(--muted); }
+  .reveal p, .reveal li { font-size: 1.4rem; line-height: 1.45; color: var(--fg); }
+  .reveal .muted { color: var(--muted); }
+  .reveal code, .reveal pre {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  .reveal pre {
+    background: #0f0f17; border: 1px solid var(--line); border-radius: 6px;
+    box-shadow: none; padding: 0.8em 1em; font-size: 0.95rem; line-height: 1.45;
+  }
+  .reveal pre code { white-space: pre; }
+  .reveal .tagline { color: var(--muted); font-size: 1.6rem; font-weight: 400; }
+  .reveal .footer {
+    position: absolute; bottom: 3vh; left: 4vw; right: 4vw;
+    display: flex; justify-content: space-between;
+    font-family: "JetBrains Mono", monospace; font-size: 0.85rem; color: var(--muted);
+  }
+  .reveal .pull-quote {
+    font-size: 3.4rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em;
+    max-width: 22ch;
+  }
+  .reveal .small { font-size: 1.05rem; }
+  .reveal .mono { font-family: "JetBrains Mono", monospace; }
+  .reveal .accent { color: var(--accent); }
+  .reveal .redis  { color: var(--redis); }
+  .reveal .good   { color: var(--good); }
+  .reveal .warn   { color: var(--warn); }
+  .reveal .chip {
+    display: inline-block; border: 1px solid var(--line); border-radius: 999px;
+    padding: 0.2em 0.8em; font-size: 0.95rem; margin-right: 0.4em;
+    font-family: "JetBrains Mono", monospace; color: var(--muted);
+  }
+  .reveal .chip.live { color: var(--good); border-color: var(--good); }
+  .reveal .chip.violet { color: var(--accent); border-color: var(--accent); }
+  .reveal .chip.red { color: var(--redis); border-color: var(--redis); }
+  .reveal .grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.2rem;
+  }
+  .reveal .grid-3 {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.4rem; margin-top: 1.2rem;
+  }
+  .reveal .card {
+    border: 1px solid var(--line); border-radius: 8px; padding: 1.1rem 1.2rem;
+    background: #0f0f17;
+  }
+  .reveal .card h3 { color: var(--fg); font-size: 1.2rem; margin-bottom: 0.3em; }
+  .reveal .card .label { font-family: "JetBrains Mono", monospace; font-size: 0.85rem; color: var(--muted); }
+  .reveal .card.violet { border-color: var(--accent); }
+  .reveal .card.red    { border-color: var(--redis); }
+  .reveal .score-row {
+    font-family: "JetBrains Mono", monospace; font-size: 1.2rem;
+    color: var(--muted); border-top: 1px solid var(--line); padding-top: 0.8rem; margin-top: 0.8rem;
+  }
+  .reveal .demo-banner {
+    text-align: center;
+    border-top: 1px dashed var(--accent);
+    border-bottom: 1px dashed var(--accent);
+    padding: 2rem 0;
+  }
+  .reveal .demo-banner .label { color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: 1.2rem; letter-spacing: 0.2em; }
+  .reveal .demo-banner h1 { font-size: 7rem; margin: 0.2em 0 0.1em 0; }
+  .reveal ul.lean { list-style: none; padding-left: 0; }
+  .reveal ul.lean li { margin: 0.35em 0; padding-left: 1.2em; position: relative; }
+  .reveal ul.lean li::before { content: "→"; position: absolute; left: 0; color: var(--accent); }
+  .reveal .diff-before { color: var(--muted); }
+  .reveal .diff-new    { color: var(--good); }
+  .reveal .diff-changed { color: var(--warn); }
+  .reveal .title-block {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 70vh; text-align: center;
+  }
+  .reveal .corner-tag {
+    position: absolute; top: 3vh; right: 4vw;
+    font-family: "JetBrains Mono", monospace; font-size: 0.85rem; color: var(--muted);
+  }
+  .reveal .arrow { color: var(--accent); font-family: "JetBrains Mono", monospace; }
+  .reveal .url-line {
+    font-family: "JetBrains Mono", monospace; font-size: 1.1rem;
+    color: var(--good); margin: 0.3em 0;
+  }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- =================== SLIDE 1 — TITLE =================== -->
+<section>
+  <div class="title-block">
+    <div class="muted mono" style="font-size:1rem; letter-spacing:0.3em; margin-bottom:1rem;">COGNEE × REDIS · SF · 2026-05-16</div>
+    <h1>Cinegraph</h1>
+    <p class="tagline" style="margin-top:1rem;">An editor agent that learns from the videos it tries to imitate.</p>
+    <div style="margin-top:3rem;">
+      <span class="chip violet">wiki, not weights</span>
+      <span class="chip red">redis session memory</span>
+      <span class="chip">cognee skill graph</span>
+    </div>
+  </div>
+  <aside class="notes">
+    Hi — I'm building Cinegraph. It's a video editor agent that doesn't just take a prompt; it watches a human edit, attempts the same edit, scores itself against the human's version, and rewrites its own playbook before trying again. Same agent, smarter every run.
+  </aside>
+</section>
+
+<!-- =================== SLIDE 2 — THE IDEA =================== -->
+<section>
+  <h3 class="muted">THE IDEA</h3>
+  <h2>Video editing is an RL environment in disguise.</h2>
+  <div style="display:flex; justify-content:center; margin-top:2rem;">
+<pre style="font-size:1.1rem; line-height:1.5; background:transparent; border:none; box-shadow:none;">
+  source clips ──►  <span class="accent">agent</span>  ──►  edited video
+                                  │
+                          ▼ compare to ▼
+                          human-edited target
+                                  │
+                          ▼ writes lessons ▼
+                          <span class="accent">[ Cinegraph wiki ]</span>
+                                  │
+                          fed back into next attempt
+</pre>
+  </div>
+  <p style="text-align:center; margin-top:1.5rem;" class="muted">
+    The feedback signal is the <span class="accent">actual human edit</span>. The action space is the edit itself.
+  </p>
+  <aside class="notes">
+    The trick is: video editing already gives you a reward signal for free — the human's final cut IS the answer key. Compare frame by frame, score, distill what went wrong into the agent's rulebook, retry. No fine-tuning, no labels, no RL infra. Just a wiki that rewrites itself.
+  </aside>
+</section>
+
+<!-- =================== SLIDE 4 — WHAT IT IS (PRODUCT) =================== -->
+<section>
+  <h3 class="muted">WHAT CINEGRAPH IS</h3>
+  <h2>An editor that ships a <span class="accent">SKILL.md</span> rewrite after every run.</h2>
+  <div class="grid-2" style="margin-top:2rem;">
+    <div class="card">
+      <div class="label">INPUT</div>
+      <h3>A human edit you want to imitate.</h3>
+      <p class="muted small">A short video the human cut by hand. The agent never sees their reasoning — just the result.</p>
+    </div>
+    <div class="card">
+      <div class="label">OUTPUT</div>
+      <h3>An agent that gets closer each run.</h3>
+      <p class="muted small">A wiki of <code>SKILL.md</code> files — covering cut detection, b-roll, pacing, transitions, on-screen text — rewritten by Cognee, not by hand.</p>
+    </div>
+    <div class="card violet">
+      <div class="label">THE LOOP</div>
+      <h3>ingest → attempt → critique → self-improve → re-attempt</h3>
+      <p class="muted small">Every step is a single CLI command.</p>
+    </div>
+    <div class="card red">
+      <div class="label">THE STAKE</div>
+      <h3>Same agent. Smarter wiki.</h3>
+      <p class="muted small">No new model. No new prompt. The improvement lives in the markdown.</p>
+    </div>
+  </div>
+  <aside class="notes">
+    To make this concrete: input is one 10-second human-edited video. Output is five SKILL.md files that started as generic editing rules and end up specialized to this kind of content. The agent's brain is the wiki — that's the artifact that improves.
+  </aside>
+</section>
+
+<!-- =================== SLIDE 5 — DEMO SIGNPOST =================== -->
+<section data-background-color="#0a0a0f">
+  <div class="title-block">
+    <div class="demo-banner" style="width:80%;">
+      <div class="label">— LIVE DEMO —</div>
+      <h1 class="accent">demo time</h1>
+      <p class="tagline">Two attempts. Same agent. Watch the wiki rewrite itself between them.</p>
+    </div>
+    <div style="margin-top:2.5rem; font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:1rem;">
+      <div class="url-line">→ http://localhost:8002        cinegraph viz (before/after, SKILL.md cards)</div>
+      <div class="url-line">→ http://localhost:3000        cognee graph UI</div>
+      <div class="url-line">→ runs/&lt;slug&gt;/attempt.mp4    rendered attempt video</div>
+    </div>
+    <div style="margin-top:2rem;" class="small muted mono">
+      reset · ingest · attempt v1 · critique · self-improve · attempt v2
+    </div>
+  </div>
+  <aside class="notes">
+    Switching to the live demo now. I'll run the full loop: reset state, ingest the human edit with Gemini, render the agent's v1 attempt, score it against the target, let Cognee rewrite the SKILL.md files, then render v2 with the new rules. Watch the F1 score climb.
+  </aside>
+</section>
+
+<!-- =================== POST-DEMO SLIDE A — WHAT COGNEE DOES =================== -->
+<section>
+  <h3 class="muted">— BACK FROM DEMO —</h3>
+  <h2>What <span class="accent">Cognee</span> does for us.</h2>
+  <p class="muted" style="margin-top:-0.4rem;">The permanent memory. The wiki that compounds.</p>
+
+  <div class="grid-2" style="margin-top:1.5rem;">
+    <div class="card violet">
+      <div class="label" style="color:var(--accent);">THE JOB</div>
+      <ul class="lean small">
+        <li>holds every SKILL.md as a graph node</li>
+        <li>turns each critique into a <code>SkillRunEntry</code></li>
+        <li>proposes a rewrite, then commits it on apply</li>
+        <li>keeps every past proposal — the wiki compounds across runs</li>
+      </ul>
+    </div>
+    <div class="card violet">
+      <div class="label" style="color:var(--accent);">THE LOOP, IN CODE</div>
+<pre style="font-size:0.85rem; margin:0;"><code class="language-python">await cognee.remember(
+    "./my_skills", content_type="skills")
+
+await cognee.remember(
+    SkillRunEntry(skill_id=..., score=..., feedback=...),
+    skill_improvement={"apply": False})
+
+await improve_skill(..., <span class="good">apply=True</span>)</code></pre>
+    </div>
+  </div>
+
+  <p class="muted small" style="margin-top:1.2rem; text-align:center;">
+    The propose-then-apply cycle is what "self-improvement" means here — and Cognee gives it to us out of the box.
+  </p>
+
+  <aside class="notes">
+    Cognee is the permanent layer. It holds every SKILL.md as a graph node, turns each critique into a SkillRunEntry, proposes a rewrite, and commits it when we call apply=True. The graph remembers every past proposal — that's what makes the wiki compounding rather than just stateful. The propose-then-apply cycle is exactly the self-improvement pattern the hackathon asked for, and we get it for free from Cognee's API.
+  </aside>
+</section>
+
+<!-- =================== POST-DEMO SLIDE B — WHAT REDIS DOES =================== -->
+<section>
+  <h3 class="muted">— AND ON THE HOT SIDE —</h3>
+  <h2>What <span class="redis">Redis</span> does for us.</h2>
+  <p class="muted" style="margin-top:-0.4rem;">The session memory. The live nervous system of every run.</p>
+
+  <div class="grid-2" style="margin-top:1.5rem;">
+    <div class="card red">
+      <div class="label" style="color:var(--redis);">SESSION MEMORY</div>
+      <p class="small"><code>cognee.remember(..., session_id=)</code> routes per-run scratchpad straight to Redis. Forgets between runs by design.</p>
+    </div>
+    <div class="card red">
+      <div class="label" style="color:var(--redis);">VECTOR SEARCH</div>
+      <p class="small">RediSearch HNSW index over source-clip descriptions — sub-ms semantic retrieval of which clip to grab.</p>
+    </div>
+    <div class="card red">
+      <div class="label" style="color:var(--redis);">STREAMS</div>
+      <p class="small">Every pipeline step (<code>ingest</code> · <code>attempt</code> · <code>critique</code> · <code>self-improve</code> · <code>memory</code> · <code>lint</code>) <code>XADD</code>s to <code>llmwiki:events</code>. Replayable audit log.</p>
+    </div>
+    <div class="card red">
+      <div class="label" style="color:var(--redis);">PUB/SUB</div>
+      <p class="small">The viz subscribes to <code>llmwiki:live</code> — events animate the dashboard as the agent works. The live stream you saw in the demo.</p>
+    </div>
+  </div>
+
+  <p class="muted small mono" style="margin-top:1.2rem; text-align:center;">
+    one Redis instance · four jobs · drives the entire demo
+  </p>
+
+  <aside class="notes">
+    Redis does four jobs at once. Session memory holds the per-run scratchpad and forgets between runs by design. RediSearch gives the agent semantic clip lookup. Streams record every pipeline event — ingest, attempt, critique, self-improve, memory writes, lint — as an XADD, so the whole timeline is replayable. And pub/sub drives the live dashboard you saw during the demo. One Redis instance, four distinct features, all wired through cognee's session_id parameter.
+  </aside>
+</section>
+
+<!-- =================== SLIDE 11 — CLOSE =================== -->
+<section>
+  <div class="title-block">
+    <div class="pull-quote" style="text-align:center;">
+      "<span class="accent">Wiki, not weights.</span><br/>
+      Same agent, smarter every run."
+    </div>
+    <div style="margin-top:3rem; font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:1rem;">
+      <div class="url-line">github.com/&lt;team&gt;/cinegraph</div>
+      <div>Piotr Tyrakowski · Cognee × Redis · SF · 2026-05-16</div>
+    </div>
+  </div>
+  <aside class="notes">
+    The pitch in one line: wiki, not weights. We didn't fine-tune anything. We didn't change the prompt. We changed the markdown — and the agent got better. Thanks.
+  </aside>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    controls: true,
+    progress: true,
+    slideNumber: 'c/t',
+    transition: 'fade',
+    width: 1280,
+    height: 800,
+    margin: 0.06,
+    plugins: [ RevealHighlight, RevealNotes ],
+  });
+</script>
+</body>
+</html>

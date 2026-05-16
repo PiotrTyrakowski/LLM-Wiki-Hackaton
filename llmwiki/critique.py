@@ -1,10 +1,8 @@
-"""Op 2b: critique the rendered attempt against the target's observations.
+"""Op 2b: critique by having Gemini watch BOTH the target and the agent's
+rendered attempt in the same prompt and write editing-rule proposals directly.
 
-The editor (Claude Code) hand-codes Hero.tsx, so we don't have a JSON EDL to
-inspect anymore. Instead we ask Gemini to look at the rendered MP4 and tell us
-where its cuts are, then compare to the target's cuts observation. We also use
-GPT-4o-mini *only* as a critic — to turn the mismatch into editing-rule
-proposals. GPT is never the editor; only the analyst.
+No GPT in the editor path; no GPT in the critic path either. Gemini is the
+analyst because it can compare the two videos visually in a single call.
 """
 from __future__ import annotations
 
@@ -15,17 +13,17 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from openai import OpenAI
+from google import genai
+from google.genai import types as gtypes
 from rich.console import Console
 
 from . import gemini_vision
-from .config import DEMO_TARGET, LLM_API_KEY, LLM_MODEL, RUNS_DIR, WIKI_DIR
+from .config import DEMO_TARGET, GEMINI_API_KEY, GEMINI_MODEL, RUNS_DIR, WIKI_DIR
 from .prompts import CUTS_PROMPT
 from .redis_use import publish_event
 from .wiki import append_log, parse_frontmatter
 
 console = Console()
-OPENAI = OpenAI(api_key=LLM_API_KEY) if LLM_API_KEY else None
 
 CUT_LINE_RE = re.compile(r"t\s*=\s*([\d.:]+)")
 
@@ -86,51 +84,50 @@ def _read_target_cuts() -> list[float]:
     return _parse_cuts(_read_obs("cuts"))
 
 
-JUDGE_PROMPT = """You are an editorial critic. The agent rendered a video to mimic the structure of a human edit. You will be given:
+JUDGE_PROMPT = """You are watching TWO short videos side by side:
 
-- AGENT_CUTS: cut timestamps Gemini detected in the agent's rendered video.
-- TARGET_CUTS: cut timestamps from the human edit.
-- TARGET_BROLL_OBSERVATIONS: where the human placed b-roll moments.
-- TARGET_TEXT_OBSERVATIONS: where the human placed on-screen text.
+  VIDEO_A = the human-edited target.
+  VIDEO_B = an automated agent's recreation attempt, made from placeholder assets.
 
-For each meaningful mismatch, write ONE concrete editing rule the agent should learn. Each rule:
+Both are ~10 seconds. Your job: identify what the AGENT did poorly relative to the human, and write concrete editing rules the agent should learn next time.
+
+For each meaningful mismatch, write ONE rule. Each rule:
 - names the SKILL it belongs to (one of: cut-detection, broll-selection, pacing, transitions, on-screen-text).
-- is a short imperative sentence with at least one numeric anchor.
-- cites specific timestamps as evidence.
+- is a short imperative sentence with at least one numeric anchor (seconds, count, color, etc.).
+- cites specific timestamps as evidence (compare A vs B at @t=...s).
 
-Output ONLY valid YAML (no fences, no prose):
+Output ONLY valid YAML (no fences, no prose, no markdown):
 
 proposals:
   - skill: broll-selection
-    rule: "Cut to b-roll at 1.5-4.0s when the speaker introduces sauna health claims."
-    evidence: "@t=1.5s human cut to b-roll; agent stayed on speaker"
+    rule: "Cut to b-roll between 1.9s and 4.3s when the speaker introduces multiple sauna types."
+    evidence: "@1.9-4.3s VIDEO_A cuts to stacked b-roll cards on a teal grid; VIDEO_B stays on speaker."
   - skill: on-screen-text
-    rule: "Use a turquoise pill with yellow accent on the keyword 'SAUNAS' between 6.9s and 9.3s."
-    evidence: "human used 'NOT ALL SAUNAS ARE CREATED EQUAL' pill 6.9-9.3s"
+    rule: "Use a turquoise pill with yellow accent on a key noun between 6.9s and 9.3s."
+    evidence: "VIDEO_A: 'NOT ALL SAUNAS ARE CREATED EQUAL' pill 6.9-9.3s; VIDEO_B: no styled text."
 """
 
 
-async def _judge(agent_cuts: list[float], target_cuts: list[float], broll_obs: str, text_obs: str) -> list[dict[str, str]]:
-    if not OPENAI:
-        return []
-    user = (
-        f"AGENT_CUTS={agent_cuts}\n"
-        f"TARGET_CUTS={target_cuts}\n\n"
-        f"TARGET_BROLL_OBSERVATIONS:\n{broll_obs[:1500]}\n\n"
-        f"TARGET_TEXT_OBSERVATIONS:\n{text_obs[:1500]}\n"
-    )
+async def _gemini_dual_critique(target_path: Path, attempt_path: Path, run_slug: str) -> list[dict[str, str]]:
+    """Upload both videos to Gemini and ask for editing rules in one call."""
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    target_upload = await gemini_vision.upload_video(target_path, run_slug)
+    attempt_upload = await gemini_vision.upload_video(attempt_path, run_slug)
+    parts = [
+        gtypes.Part.from_text(text="Below: VIDEO_A is the human target, VIDEO_B is the agent's attempt."),
+        gtypes.Part.from_uri(file_uri=target_upload["uri"], mime_type=target_upload["mime_type"]),
+        gtypes.Part.from_uri(file_uri=attempt_upload["uri"], mime_type=attempt_upload["mime_type"]),
+        gtypes.Part.from_text(text=JUDGE_PROMPT),
+    ]
     resp = await asyncio.to_thread(
-        OPENAI.chat.completions.create,
-        model=LLM_MODEL,
-        messages=[
-            {"role": "system", "content": JUDGE_PROMPT},
-            {"role": "user", "content": user},
-        ],
-        temperature=0.3,
+        client.models.generate_content,
+        model=GEMINI_MODEL,
+        contents=[gtypes.Content(role="user", parts=parts)],
     )
-    text = (resp.choices[0].message.content or "").strip().strip("`")
+    text = (resp.text or "").strip().strip("`")
     if text.startswith("yaml"):
         text = text[4:].lstrip()
+    (RUNS_DIR / run_slug / "judge_raw.txt").write_text(text)
     try:
         data = yaml.safe_load(text)
         if isinstance(data, dict):
@@ -153,21 +150,20 @@ async def critique(run_slug: str) -> dict[str, Any]:
     attempt_path = run_dir / "attempt.mp4"
     if not attempt_path.exists():
         raise FileNotFoundError(f"attempt.mp4 missing: {attempt_path}")
+    target_path = DEMO_TARGET
 
-    console.rule(f"[bold yellow]Critique {run_slug}")
+    console.rule(f"[bold yellow]Critique {run_slug} — Gemini watches BOTH videos")
     publish_event("critique_start", {"slug": run_slug})
 
     target_cuts = _read_target_cuts()
     console.print(f"[critique] target cuts: n={len(target_cuts)}")
     agent_cuts = await _extract_agent_cuts(attempt_path, run_slug)
     console.print(f"[critique] agent cuts: n={len(agent_cuts)}")
-
     scores = cut_f1(agent_cuts, target_cuts)
     console.print(f"[critique] scores: {scores}")
 
-    broll_obs = _read_obs("broll")
-    text_obs = _read_obs("text")
-    proposals = await _judge(agent_cuts, target_cuts, broll_obs, text_obs)
+    console.print("[critique] asking Gemini to compare both videos…")
+    proposals = await _gemini_dual_critique(target_path, attempt_path, run_slug)
     console.print(f"[critique] {len(proposals)} proposals")
 
     out = {

@@ -42,12 +42,19 @@ async def ingest_skills() -> Any:
 
 
 async def ingest_file(path: Path, *, session_id: str | None = None) -> None:
-    """Push an observation markdown into session memory or the graph."""
-    text = path.read_text()
+    """Ingest a markdown file into Cognee as a proper document.
+
+    With session_id -> goes to Redis session memory as text.
+    Without session_id -> ingested as a FILE so it appears in the
+    Datasets UI as its own document, not as a chunk of one big blob.
+    """
     if session_id:
+        text = path.read_text()
         await remember_session(text, session_id=session_id)
     else:
-        await remember_permanent(text, dataset_name=COGNEE_DATASET)
+        # Pass the path string directly so cognee creates a file-backed doc.
+        await cognee.remember(str(path), dataset_name=COGNEE_DATASET)
+        publish_event("graph_file_ingest", {"file": path.name})
 
 
 async def recall_session(query: str, session_id: str) -> list[Any]:

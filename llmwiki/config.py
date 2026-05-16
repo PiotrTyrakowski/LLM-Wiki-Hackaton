@@ -24,7 +24,7 @@ DEMO_TARGET = DATA_DIR / "target" / "edited.mp4"
 # Keys & providers
 LLM_API_KEY = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "openai")
-LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-5.5")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 

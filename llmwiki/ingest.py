@@ -33,21 +33,29 @@ async def ingest(target_path: Path | None = None, run_slug: str | None = None) -
     upload = await gemini_vision.upload_video(target, run_slug)
     console.print(f"[upload] ready: {upload['uri']}")
 
-    # 2. Fire all 5 prompts in parallel
-    async def _ask_and_write(kind: str, prompt: str) -> str:
+    # 2. Fire Gemini prompts in parallel (vision calls), then serialize the
+    #    cognee writes — cognee's local DB doesn't tolerate concurrent writers.
+    async def _ask(kind: str, prompt: str) -> tuple[str, str, Path]:
         console.print(f"[gemini→{kind}] asking…")
         answer = await gemini_vision.ask(upload, prompt)
         path = write_observation(run_slug, kind, prompt, answer)
         console.print(f"[wrote] {path.relative_to(path.parent.parent.parent)}")
-        # Per-observation session-memory write -> Redis
+        return kind, answer, path
+
+    gem_results = await asyncio.gather(*[
+        _ask(kind, prompt) for kind, prompt in INGEST_PROMPTS.items()
+    ])
+    results: list[str] = []
+    for kind, answer, path in gem_results:
         console.print(f"[session→redis] {kind}.md")
         await memory.remember_session(answer, session_id=session_id)
+        try:
+            console.print(f"[graph←file] {path.name}")
+            await memory.ingest_file(path)
+        except Exception as exc:
+            console.print(f"[warn] graph file ingest: {exc}")
         publish_event("observation", {"kind": kind, "preview": answer[:200]})
-        return answer
-
-    results = await asyncio.gather(*[
-        _ask_and_write(kind, prompt) for kind, prompt in INGEST_PROMPTS.items()
-    ])
+        results.append(answer)
 
     # 3. Distill a summary to the permanent graph
     distilled = (

@@ -66,6 +66,33 @@ def self_improve_cmd(run_slug: str) -> None:
 
 
 @app.command()
+def lint() -> None:
+    """Op 3: health-check the wiki/skill pack; write wiki/_lint_report.md."""
+    from . import lint as lint_module
+    asyncio.run(lint_module.lint())
+
+
+@app.command()
+def ask(
+    prompt: str = typer.Argument(..., help="Question to ask Gemini about the target video"),
+    start: float = typer.Option(0.0, "--start", help="Start second of the range"),
+    duration: float = typer.Option(None, "--duration", help="Duration in seconds (omit for the whole target)"),
+) -> None:
+    """Editor tool: ask Gemini a free-form question about a slice of the target."""
+    from . import editor_tools
+    asyncio.run(editor_tools.ask_target(prompt, start_s=start, duration_s=duration))
+
+
+@app.command()
+def frames(
+    timestamps: list[float] = typer.Argument(..., help="Timestamps in seconds, e.g. 1.5 3.2 6.8"),
+) -> None:
+    """Editor tool: extract still frames from the target at given timestamps."""
+    from . import editor_tools
+    editor_tools.extract_frames(timestamps)
+
+
+@app.command()
 def viz(port: int = 8000) -> None:
     """Start the FastAPI before/after viz server."""
     import uvicorn
