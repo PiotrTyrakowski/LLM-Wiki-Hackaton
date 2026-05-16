@@ -1,0 +1,67 @@
+{% extends "_base.html" %}
+{% block content %}
+<h1>Cinegraph — current state of the wiki</h1>
+<p style="color:var(--fg-dim);max-width:680px">The agent's editing knowledge lives in five SKILL.md files. Each card below is rendered live from disk. After each run, the critique loop rewrites these files; refresh to see the change.</p>
+
+<div class="grid-2" style="margin-top:24px">
+  <div class="panel">
+    <h3>How memory is split right now</h3>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-family:'JetBrains Mono',monospace;font-size:12px">
+      <div class="layer-redis">redis</div><div>session memory (per run, ephemeral)</div>
+      <div class="layer-redis">redis</div><div>llmwiki:events stream — append-only event log</div>
+      <div class="layer-redis">redis</div><div>llmwiki:live channel — pub/sub for this viz</div>
+      <div class="layer-redis">redis</div><div>llmwiki:clip-vectors — HNSW vector index over source clips</div>
+      <div class="layer-cognee">cognee</div><div>permanent knowledge graph (cross-run)</div>
+      <div class="layer-cognee">cognee</div><div>SKILL.md ingested as skills via remember(content_type=skills)</div>
+      <div class="layer-cognee">cognee</div><div>SkillRunEntry → improve_skill rewrites the SKILL.md on disk</div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Live event stream <span class="mono" style="color:var(--fg-dim);font-size:10px">XREVRANGE llmwiki:events 30</span></h3>
+    <div id="event-stream" class="events-list"><em style="color:var(--fg-dim)">loading…</em></div>
+  </div>
+</div>
+
+<h2>Runs</h2>
+<div class="panel" style="padding:0">
+<table class="runs-table">
+  <thead>
+    <tr><th>slug</th><th>attempt.mp4</th><th>critique</th><th>F1</th><th>proposals</th><th>skill diff</th></tr>
+  </thead>
+  <tbody>
+  {% for r in runs %}
+    <tr>
+      <td><a class="slug" href="/run/{{ r.slug }}">{{ r.slug }}</a></td>
+      <td>{% if r.attempt_mp4 %}<a href="/runs/{{ r.slug }}/attempt.mp4">▶ play</a>{% else %}<span style="color:var(--fg-dim)">—</span>{% endif %}</td>
+      <td>{% if r.critique_md %}✓{% else %}<span style="color:var(--fg-dim)">—</span>{% endif %}</td>
+      {% set f1 = r.get('f1') %}
+      <td>{% if f1 is not none %}<span class="f1 {% if f1 >= 0.6 %}good{% elif f1 >= 0.3 %}warn{% else %}bad{% endif %}">{{ "%.3f"|format(f1) }}</span>{% else %}<span style="color:var(--fg-dim)">—</span>{% endif %}</td>
+      <td>{{ r.get('n_proposals') or "—" }}</td>
+      <td>{% if r.skill_diff_md %}<a href="/run/{{ r.slug }}">see diff</a>{% else %}<span style="color:var(--fg-dim)">—</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--fg-dim)">no runs yet — run <code>uv run python -m llmwiki attempt --no-lessons</code></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Current SKILL.md files (the "wiki")</h2>
+<div class="small-grid">
+{% for s in skills %}
+  <div class="skill-card">
+    <div class="skill-name">{{ s.name }}</div>
+    <div class="desc">{{ s.description }}</div>
+    <div class="body">{{ s.html|safe }}</div>
+    <div class="meta">{{ s.n_rules }} rules · my_skills/{{ s.name }}/SKILL.md</div>
+  </div>
+{% endfor %}
+</div>
+
+{% if target_exists %}
+<h2>Target (human edit) — what the agent is trying to recreate</h2>
+<div class="panel" style="max-width:720px">
+  <video controls preload="metadata" src="/data/demo/target/edited.mp4"></video>
+</div>
+{% endif %}
+{% endblock %}

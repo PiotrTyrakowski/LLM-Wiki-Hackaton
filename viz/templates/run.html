@@ -1,0 +1,72 @@
+{% extends "_base.html" %}
+{% block content %}
+<p><a href="/">← all runs</a></p>
+<h1 class="mono" style="font-size:18px">{{ slug }}</h1>
+
+<div class="grid-2" style="margin-top:24px">
+  <div class="panel">
+    <h3>Cinegraph attempt (this run)</h3>
+    {% if attempt_url %}
+      <video controls preload="metadata" src="{{ attempt_url }}"></video>
+    {% else %}
+      <em style="color:var(--fg-dim)">no attempt.mp4 yet</em>
+    {% endif %}
+  </div>
+  <div class="panel">
+    <h3>Target (human edit)</h3>
+    <video controls preload="metadata" src="/data/demo/target/edited.mp4"></video>
+  </div>
+</div>
+
+{% if critique %}
+<h2>Critique scores</h2>
+<div class="scores">
+  <div>
+    <div class="label">precision</div>
+    <div class="num">{{ "%.3f"|format(critique.scores.precision) }}</div>
+  </div>
+  <div>
+    <div class="label">recall</div>
+    <div class="num">{{ "%.3f"|format(critique.scores.recall) }}</div>
+  </div>
+  <div>
+    <div class="label">F1</div>
+    <div class="num">{{ "%.3f"|format(critique.scores.f1) }}</div>
+  </div>
+  <div>
+    <div class="label">agent cuts</div>
+    <div class="num">{{ critique.scores.agent_n }}</div>
+  </div>
+  <div>
+    <div class="label">target cuts</div>
+    <div class="num">{{ critique.scores.target_n }}</div>
+  </div>
+  <div>
+    <div class="label">matched</div>
+    <div class="num">{{ critique.scores.matched }}</div>
+  </div>
+</div>
+{% endif %}
+
+{% if skill_diff_html %}
+<h2>What it learned — SKILL.md before vs after</h2>
+<div class="panel diff-panel">{{ skill_diff_html|safe }}</div>
+{% endif %}
+
+<h2>Current SKILL.md state (right now, on disk)</h2>
+<div class="small-grid">
+{% for s in skills %}
+  <div class="skill-card changed">
+    <div class="skill-name">{{ s.name }}</div>
+    <div class="desc">{{ s.description }}</div>
+    <div class="body">{{ s.html|safe }}</div>
+    <div class="meta">{{ s.n_rules }} rules · my_skills/{{ s.name }}/SKILL.md</div>
+  </div>
+{% endfor %}
+</div>
+
+{% if critique_html %}
+<h2>Critique notes</h2>
+<div class="panel">{{ critique_html|safe }}</div>
+{% endif %}
+{% endblock %}

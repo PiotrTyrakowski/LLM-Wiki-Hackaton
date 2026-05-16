@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% block title %}Cinegraph viz{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg-2: #14141c;
+      --panel: #1a1a26;
+      --border: #2a2a3a;
+      --fg: #e8e8ef;
+      --fg-dim: #9999a8;
+      --accent: #7c5cff;
+      --redis: #dc382d;
+      --cognee: #ffffff;
+      --good: #4ade80;
+      --warn: #facc15;
+      --bad: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 15px/1.55 'Inter', system-ui, sans-serif;
+      letter-spacing: -0.005em;
+    }
+    code, pre, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    nav.top {
+      display: flex; gap: 16px; align-items: center;
+      padding: 16px 32px; border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--bg-2), transparent);
+    }
+    nav.top .brand { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
+    nav.top .brand .gloss { color: var(--accent); }
+    nav.top .pill { font-size: 11px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--fg-dim); }
+    nav.top .pill.redis { color: var(--redis); border-color: rgba(220,56,45,0.4); }
+    nav.top .pill.cognee { color: var(--cognee); border-color: rgba(255,255,255,0.3); }
+    nav.top .spacer { flex: 1; }
+    main { padding: 32px; max-width: 1400px; margin: 0 auto; }
+    h1 { font-size: 32px; margin: 0 0 16px; letter-spacing: -0.02em; }
+    h2 { font-size: 20px; margin: 32px 0 12px; letter-spacing: -0.015em; }
+    h3 { font-size: 15px; margin: 16px 0 8px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+    }
+    .panel h3 { margin-top: 0; }
+    .skill-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+    }
+    .skill-card .skill-name {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 700; font-size: 16px; margin-bottom: 4px;
+    }
+    .skill-card .skill-name::before {
+      content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    }
+    .skill-card .desc { color: var(--fg-dim); font-size: 13px; margin-bottom: 12px; }
+    .skill-card .body { font-size: 13px; line-height: 1.6; }
+    .skill-card .body h1, .skill-card .body h2 { font-size: 14px; margin: 12px 0 4px; color: var(--fg); }
+    .skill-card .body ol { padding-left: 24px; margin: 8px 0; }
+    .skill-card .body li { margin: 4px 0; }
+    .skill-card .body code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    .skill-card .meta { color: var(--fg-dim); font-size: 11px; margin-top: 12px; }
+    .skill-card.changed { border-color: rgba(124,92,255,0.5); box-shadow: 0 0 0 1px rgba(124,92,255,0.2); }
+    .pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 4px; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .runs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .runs-table th, .runs-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .runs-table th { color: var(--fg-dim); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .runs-table .f1.good { color: var(--good); font-weight: 700; }
+    .runs-table .f1.bad { color: var(--bad); font-weight: 700; }
+    .runs-table .f1.warn { color: var(--warn); font-weight: 700; }
+    .runs-table a.slug { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    video { width: 100%; border-radius: 8px; background: #000; }
+    .diff-panel pre { background: var(--bg); padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 12px; line-height: 1.5; }
+    .diff-panel pre code { background: none; padding: 0; }
+    .scores { display: flex; gap: 24px; padding: 16px; background: var(--bg); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+    .scores .num { font-size: 28px; font-weight: 700; color: var(--accent); }
+    .scores .label { color: var(--fg-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .events-list { font-family: 'JetBrains Mono', monospace; font-size: 11px; max-height: 280px; overflow-y: auto; }
+    .events-list .event { padding: 4px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
+    .events-list .event .kind { color: var(--accent); min-width: 130px; }
+    .events-list .event .body { color: var(--fg-dim); flex: 1; word-break: break-all; }
+    .layer-redis { color: var(--redis); }
+    .layer-cognee { color: var(--cognee); }
+    .small-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  </style>
+</head>
+<body>
+  <nav class="top">
+    <div class="brand">Cinegraph <span class="gloss">▸</span> wiki viz</div>
+    <span class="pill"><a href="/">/</a></span>
+    <span class="pill">/skills (live)</span>
+    <span class="spacer"></span>
+    <span class="pill cognee"><span class="pulse"></span> cognee · permanent graph</span>
+    <span class="pill redis"><span class="pulse"></span> redis · session + streams + vectors</span>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    // Auto-poll events every 1.5s so the user sees Redis streams update live.
+    async function pollEvents() {
+      const list = document.getElementById("event-stream");
+      if (!list) return;
+      try {
+        const r = await fetch("/events?count=30");
+        const data = await r.json();
+        list.innerHTML = data.map(e => {
+          const k = e.kind || "";
+          const body = Object.entries(e).filter(([k]) => !["kind","_id"].includes(k)).map(([k,v]) => `${k}=${v}`).join(" ");
+          return `<div class="event"><span class="kind">${k}</span><span class="body">${body}</span></div>`;
+        }).join("");
+      } catch (e) {}
+    }
+    if (document.getElementById("event-stream")) {
+      pollEvents();
+      setInterval(pollEvents, 1500);
+    }
+  </script>
+</body>
+</html>

@@ -1,12 +1,52 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Env / secrets
 .env
+.env.local
+*.key
+
+# Cognee state (local sqlite + vectors + sessions)
 .cognee_system/
 .cognee_data/
 cognee_state/
+
+# Per-run artifacts (videos, EDLs, critique)
 runs/
-data/demo/
+*.mp4
+*.mov
+*.mkv
+*.webm
+
+# Audio
+*.mp3
+*.wav
+
+# Images that aren't part of source (keep placeholders + recreator imports)
+data/demo/source/*.mp4
+data/demo/source/*.png
+data/demo/target/*.mp4
+
+# Node + Remotion
 node_modules/
 remotion/build/
+remotion/out/
+remotion/public/source
+
+# Editor / OS
 .DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Background-task ephemera
+/private/tmp/claude-501/
